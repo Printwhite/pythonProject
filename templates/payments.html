@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>收款管理 - 租赁管理系统</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <h2><i class="fas fa-building"></i> 租赁管理</h2>
+            </div>
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a href="{{ url_for('index') }}" class="nav-link">
+                        <i class="fas fa-home"></i>
+                        <span>首页</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('customers') }}" class="nav-link">
+                        <i class="fas fa-users"></i>
+                        <span>客户管理</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('rooms') }}" class="nav-link">
+                        <i class="fas fa-door-open"></i>
+                        <span>房间管理</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('contracts') }}" class="nav-link">
+                        <i class="fas fa-file-contract"></i>
+                        <span>合同管理</span>
+                    </a>
+                </li>
+                <li class="nav-item active">
+                    <a href="{{ url_for('payments') }}" class="nav-link">
+                        <i class="fas fa-money-bill-wave"></i>
+                        <span>收款管理</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('rent_plans') }}" class="nav-link">
+                        <i class="fas fa-calendar-alt"></i>
+                        <span>租金计划</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('statistics') }}" class="nav-link">
+                        <i class="fas fa-chart-bar"></i>
+                        <span>统计分析</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('import_data') }}" class="nav-link">
+                        <i class="fas fa-upload"></i>
+                        <span>数据导入</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+
+        <main class="main-content">
+            <header class="header">
+                <div class="header-content">
+                    <h1>收款管理</h1>
+                    <div class="header-actions">
+                        <button class="btn btn-primary" onclick="goToAddPayment()">
+                            <i class="fas fa-plus"></i> 登记收款
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <div class="dashboard">
+                <div class="stats-cards">
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-money-bill-wave"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3>总收款数</h3>
+                            <p class="stat-number">{{ payments|length }}</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-yen-sign"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3>总收款金额</h3>
+                            <p class="stat-number">¥{{ "%.2f"|format(payments|sum(attribute='amount')) }}</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-calendar-day"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3>本月收款</h3>
+                            <p class="stat-number" id="thisMonthPayments">-</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3>本月金额</h3>
+                            <p class="stat-number" id="thisMonthAmount">-</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="table-container">
+                    <div class="table-header">
+                        <h2>收款记录</h2>
+                        <div class="table-actions">
+                            <!-- 筛选和排序控件 -->
+                            <div class="filter-section">
+                                <div class="filter-group">
+                                    <label for="companyFilter">按公司筛选:</label>
+                                    <select id="companyFilter" onchange="filterPayments()">
+                                        <option value="">全部公司</option>
+                                        {% for company in companies %}
+                                        <option value="{{ company }}" {% if company == company_filter %}selected{% endif %}>{{ company }}</option>
+                                        {% endfor %}
+                                    </select>
+                                </div>
+                                <div class="filter-group">
+                                    <label for="dateSort">按日期排序:</label>
+                                    <select id="dateSort" onchange="filterPayments()">
+                                        <option value="desc" {% if date_sort == 'desc' %}selected{% endif %}>最新优先</option>
+                                        <option value="asc" {% if date_sort == 'asc' %}selected{% endif %}>最早优先</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <input type="text" id="paymentSearch" placeholder="搜索收款...">
+                        </div>
+                    </div>
+                    <table id="paymentTable">
+                        <thead>
+                            <tr>
+                                <th>合同编号</th>
+                                <th>客户</th>
+                                <th>房间</th>
+                                <th>收款金额</th>
+                                <th>收款日期</th>
+                                <th>收款方式</th>
+                                <th>累计收款</th>
+                                <th>备注</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for payment in payments %}
+                            <tr>
+                                <td>{{ payment.contract.contract_number }}</td>
+                                <td>{{ payment.contract.customer.company_name }}</td>
+                                <td>{{ payment.contract.room.room_number if payment.contract.room else '未知房间' }}</td>
+                                <td>¥{{ "%.2f"|format(payment.amount) }}</td>
+                                <td>{{ payment.payment_date.strftime('%Y-%m-%d %H:%M') }}</td>
+                                <td>{{ payment.payment_method }}</td>
+                                <td>
+                                    {% set contract_payments = payments|selectattr('contract_id', 'equalto', payment.contract_id)|list %}
+                                    {% set total_received = contract_payments|sum(attribute='amount') %}
+                                    ¥{{ "%.2f"|format(total_received) }}
+                                </td>
+                                <td>{{ payment.remarks or '-' }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            calculateThisMonthPayments();
+        });
+        
+        function calculateThisMonthPayments() {
+            const now = new Date();
+            const currentMonth = now.getMonth() + 1;
+            const currentYear = now.getFullYear();
+            
+            const table = document.getElementById('paymentTable');
+            const rows = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+            
+            let thisMonthCount = 0;
+            let thisMonthAmount = 0;
+            
+            for (let row of rows) {
+                const dateCell = row.cells[4]; // 收款日期列
+                const amountCell = row.cells[3]; // 收款金额列
+                
+                const dateText = dateCell.textContent;
+                const amountText = amountCell.textContent.replace('¥', '');
+                
+                const paymentDate = new Date(dateText);
+                const amount = parseFloat(amountText);
+                
+                if (paymentDate.getMonth() + 1 === currentMonth && paymentDate.getFullYear() === currentYear) {
+                    thisMonthCount++;
+                    thisMonthAmount += amount;
+                }
+            }
+            
+            document.getElementById('thisMonthPayments').textContent = thisMonthCount;
+            document.getElementById('thisMonthAmount').textContent = '¥' + thisMonthAmount.toFixed(2);
+        }
+        
+        function filterPayments() {
+            const companyFilter = document.getElementById('companyFilter').value;
+            const dateSort = document.getElementById('dateSort').value;
+            
+            // 构建URL参数
+            const params = new URLSearchParams();
+            if (companyFilter) {
+                params.append('company', companyFilter);
+            }
+            if (dateSort) {
+                params.append('sort', dateSort);
+            }
+            
+            // 跳转到筛选后的页面
+            const url = '/payments' + (params.toString() ? '?' + params.toString() : '');
+            location.href = url;
+        }
+    </script>
+</body>
+</html>

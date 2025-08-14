@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>添加合同 - 租赁管理系统</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <h2><i class="fas fa-building"></i> 租赁管理</h2>
+            </div>
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a href="{{ url_for('index') }}" class="nav-link">
+                        <i class="fas fa-home"></i>
+                        <span>首页</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('customers') }}" class="nav-link">
+                        <i class="fas fa-users"></i>
+                        <span>客户管理</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('rooms') }}" class="nav-link">
+                        <i class="fas fa-door-open"></i>
+                        <span>房间管理</span>
+                    </a>
+                </li>
+                <li class="nav-item active">
+                    <a href="{{ url_for('contracts') }}" class="nav-link">
+                        <i class="fas fa-file-contract"></i>
+                        <span>合同管理</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('payments') }}" class="nav-link">
+                        <i class="fas fa-money-bill-wave"></i>
+                        <span>收款管理</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('rent_plans') }}" class="nav-link">
+                        <i class="fas fa-calendar-alt"></i>
+                        <span>租金计划</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('statistics') }}" class="nav-link">
+                        <i class="fas fa-chart-bar"></i>
+                        <span>统计分析</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('import_data') }}" class="nav-link">
+                        <i class="fas fa-upload"></i>
+                        <span>数据导入</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+
+        <main class="main-content">
+            <header class="header">
+                <div class="header-content">
+                    <h1>添加合同</h1>
+                    <div class="header-actions">
+                        <button class="btn btn-secondary" onclick="goToContracts()">
+                            <i class="fas fa-arrow-left"></i> 返回
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <div class="dashboard">
+                <div class="table-container">
+                    <div class="table-header">
+                        <h2>合同信息</h2>
+                    </div>
+                    <div class="modal-body">
+                        <form id="contractForm">
+                            <div class="form-group">
+                                <label>合同编号</label>
+                                <input type="text" name="contract_number" required>
+                            </div>
+                            <div class="form-group">
+                                <label>客户</label>
+                                <select name="customer_id" required>
+                                    <option value="">选择客户</option>
+                                    {% for customer in customers %}
+                                    <option value="{{ customer.id }}">{{ customer.company_name }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>房间</label>
+                                <select name="room_id" required>
+                                    <option value="">选择房间</option>
+                                    {% for room in rooms %}
+                                    <option value="{{ room.id }}">{{ room.room_number }} ({{ room.area }}㎡)</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>租期开始</label>
+                                <input type="date" name="start_date" required>
+                            </div>
+                            <div class="form-group">
+                                <label>租期结束</label>
+                                <input type="date" name="end_date" required>
+                            </div>
+                            <div class="form-group">
+                                <label>租金单价 (元/㎡/月)</label>
+                                <input type="number" step="0.01" name="unit_price" id="unit_price" required onchange="calculateRents()">
+                            </div>
+                            <div class="form-group">
+                                <label>月租金 (元)</label>
+                                <input type="number" step="0.01" name="monthly_rent" id="monthly_rent" required readonly>
+                            </div>
+                            <div class="form-group">
+                                <label>年租金 (元)</label>
+                                <input type="number" step="0.01" name="yearly_rent" id="yearly_rent" required readonly>
+                            </div>
+                            <div class="form-group">
+                                <label>合同金额 (元)</label>
+                                <input type="number" step="0.01" name="contract_amount" id="contract_amount" required readonly>
+                            </div>
+                            <div class="form-group">
+                                <label>付款周期</label>
+                                <select name="payment_frequency" required onchange="updatePaymentSchedule()">
+                                    <option value="月付">月付</option>
+                                    <option value="季付">季付</option>
+                                    <option value="半年付">半年付</option>
+                                    <option value="年付">年付</option>
+                                    <option value="其他">其他</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>收款金额 (元)</label>
+                                <input type="number" step="0.01" name="received_amount" value="0" required>
+                            </div>
+                            <div class="form-group">
+                                <label>合同约定保证金</label>
+                                <input type="number" step="0.01" name="deposit_contract" value="0" required>
+                            </div>
+                            <div class="form-group">
+                                <label>实收保证金</label>
+                                <input type="number" step="0.01" name="deposit_received" value="0" required>
+                            </div>
+                            <div class="form-group">
+                                <label>付款日</label>
+                                <input type="number" name="payment_day" min="1" max="31" value="1" required>
+                            </div>
+                            <div class="form-group">
+                                <label>收款方式</label>
+                                <select name="payment_method" required>
+                                    <option value="银行转账">银行转账</option>
+                                    <option value="现金">现金</option>
+                                    <option value="支票">支票</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>开票方式</label>
+                                <select name="invoice_method" required>
+                                    <option value="月结">月结</option>
+                                    <option value="季结">季结</option>
+                                    <option value="半年结">半年结</option>
+                                    <option value="年结">年结</option>
+                                </select>
+                            </div>
+                            
+                            <!-- 收款安排 -->
+                            <div class="form-section">
+                                <h3>收款安排</h3>
+                                <div class="form-group">
+                                    <label>第一期收款开始日期</label>
+                                    <input type="date" name="first_payment_start" id="first_payment_start" required onchange="updatePaymentSchedule()">
+                                </div>
+                                <div class="form-group">
+                                    <label>第一期收款结束日期</label>
+                                    <input type="date" name="first_payment_end" id="first_payment_end" required onchange="updatePaymentSchedule()">
+                                </div>
+                                <div class="form-group">
+                                    <label>总期数</label>
+                                    <input type="number" name="total_periods" id="total_periods" min="1" required readonly>
+                                </div>
+                                <div class="form-group">
+                                    <label>下次收款日期</label>
+                                    <input type="date" name="next_payment_date" id="next_payment_date" required readonly>
+                                </div>
+                            </div>
+                            
+                            <div class="form-group">
+                                <label>备注</label>
+                                <textarea name="remarks" rows="3"></textarea>
+                            </div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary" onclick="return confirmContractSave()">
+                                    <i class="fas fa-save"></i> 保存
+                                </button>
+                                <button type="button" class="btn btn-secondary" onclick="goToContracts()">
+                                    取消
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+        // 获取房间信息用于计算
+        let roomArea = 0;
+        
+        // 页面加载时获取房间信息
+        document.addEventListener('DOMContentLoaded', function() {
+            const roomSelect = document.querySelector('select[name="room_id"]');
+            if (roomSelect) {
+                roomSelect.addEventListener('change', function() {
+                    const selectedOption = this.options[this.selectedIndex];
+                    const roomText = selectedOption.text;
+                    const areaMatch = roomText.match(/\((\d+(?:\.\d+)?)㎡\)/);
+                    if (areaMatch) {
+                        roomArea = parseFloat(areaMatch[1]);
+                        calculateRents();
+                    }
+                });
+            }
+            
+            // 初始化日期字段
+            const startDateInput = document.querySelector('input[name="start_date"]');
+            const firstPaymentStartInput = document.querySelector('#first_payment_start');
+            if (startDateInput && firstPaymentStartInput) {
+                startDateInput.addEventListener('change', function() {
+                    firstPaymentStartInput.value = this.value;
+                    updatePaymentSchedule();
+                });
+            }
+        });
+        
+        // 计算租金相关金额
+        function calculateRents() {
+            const unitPrice = parseFloat(document.getElementById('unit_price').value) || 0;
+            const startDate = new Date(document.querySelector('input[name="start_date"]').value);
+            const endDate = new Date(document.querySelector('input[name="end_date"]').value);
+            
+            if (unitPrice > 0 && roomArea > 0) {
+                // 月租金 = 面积 * 单价 * 365 / 12，取2位小数
+                const monthlyRent = (unitPrice * roomArea * 365 / 12).toFixed(2);
+                document.getElementById('monthly_rent').value = monthlyRent;
+                
+                const yearlyRent = (parseFloat(monthlyRent) * 12).toFixed(2);
+                document.getElementById('yearly_rent').value = yearlyRent;
+                
+                // 计算合同总金额
+                if (startDate && endDate && endDate > startDate) {
+                    const monthsDiff = (endDate.getFullYear() - startDate.getFullYear()) * 12 + 
+                                     (endDate.getMonth() - startDate.getMonth());
+                    const contractAmount = (parseFloat(monthlyRent) * Math.max(1, monthsDiff)).toFixed(2);
+                    document.getElementById('contract_amount').value = contractAmount;
+                }
+            }
+        }
+        
+        // 更新收款安排
+        function updatePaymentSchedule() {
+            const startDate = new Date(document.querySelector('input[name="start_date"]').value);
+            const endDate = new Date(document.querySelector('input[name="end_date"]').value);
+            const paymentFrequency = document.querySelector('select[name="payment_frequency"]').value;
+            const firstPaymentStart = new Date(document.getElementById('first_payment_start').value);
+            const firstPaymentEnd = new Date(document.getElementById('first_payment_end').value);
+            
+            if (startDate && endDate && endDate > startDate) {
+                let totalPeriods = 0;
+                let nextPaymentDate = new Date(firstPaymentEnd);
+                
+                switch (paymentFrequency) {
+                    case '月付':
+                        totalPeriods = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24 * 30));
+                        nextPaymentDate.setMonth(nextPaymentDate.getMonth() + 1);
+                        break;
+                    case '季付':
+                        totalPeriods = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24 * 90));
+                        nextPaymentDate.setMonth(nextPaymentDate.getMonth() + 3);
+                        break;
+                    case '半年付':
+                        totalPeriods = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24 * 180));
+                        nextPaymentDate.setMonth(nextPaymentDate.getMonth() + 6);
+                        break;
+                    case '年付':
+                        totalPeriods = Math.ceil((endDate - startDate) / (1000 * 60 * 60 * 24 * 365));
+                        nextPaymentDate.setFullYear(nextPaymentDate.getFullYear() + 1);
+                        break;
+                    default:
+                        totalPeriods = 1;
+                        break;
+                }
+                
+                document.getElementById('total_periods').value = Math.max(1, totalPeriods);
+                document.getElementById('next_payment_date').value = nextPaymentDate.toISOString().split('T')[0];
+            }
+        }
+        
+        function confirmContractSave() {
+            const form = document.getElementById('contractForm');
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData);
+            
+            // 检查必填字段
+            if (!data.contract_number || !data.customer_id || !data.room_id || !data.start_date || !data.end_date) {
+                showNotification('⚠️ 请填写所有必填字段', 'warning');
+                return false;
+            }
+            
+            // 检查日期
+            const startDate = new Date(data.start_date);
+            const endDate = new Date(data.end_date);
+            if (endDate <= startDate) {
+                showNotification('⚠️ 租期结束日期必须晚于开始日期', 'warning');
+                return false;
+            }
+            
+            if (!confirm(`📋 合同保存确认\n\n您即将保存合同：${data.contract_number}\n\n此操作将：\n• 创建新的租赁合同\n• 自动生成租金计划\n• 将房间状态改为已租\n• 发送相关通知\n\n确定要保存吗？`)) {
+                return false;
+            }
+            
+            return true;
+        }
+        
+        document.getElementById('contractForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            const data = Object.fromEntries(formData);
+            
+            fetch('/contracts/add', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    showNotification(result.message, 'success');
+                    setTimeout(() => {
+                        location.href = '/contracts';
+                    }, 1000);
+                } else {
+                    showNotification(result.message, 'error');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

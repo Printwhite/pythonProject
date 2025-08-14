@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>客户管理 - 租赁管理系统</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <h2><i class="fas fa-building"></i> 租赁管理</h2>
+            </div>
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a href="{{ url_for('index') }}" class="nav-link">
+                        <i class="fas fa-home"></i>
+                        <span>首页</span>
+                    </a>
+                </li>
+                <li class="nav-item active">
+                    <a href="{{ url_for('customers') }}" class="nav-link">
+                        <i class="fas fa-users"></i>
+                        <span>客户管理</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('rooms') }}" class="nav-link">
+                        <i class="fas fa-door-open"></i>
+                        <span>房间管理</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('contracts') }}" class="nav-link">
+                        <i class="fas fa-file-contract"></i>
+                        <span>合同管理</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('payments') }}" class="nav-link">
+                        <i class="fas fa-money-bill-wave"></i>
+                        <span>收款管理</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('rent_plans') }}" class="nav-link">
+                        <i class="fas fa-calendar-alt"></i>
+                        <span>租金计划</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('statistics') }}" class="nav-link">
+                        <i class="fas fa-chart-bar"></i>
+                        <span>统计分析</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('import_data') }}" class="nav-link">
+                        <i class="fas fa-upload"></i>
+                        <span>数据导入</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+
+        <main class="main-content">
+            <header class="header">
+                <div class="header-content">
+                    <h1>客户管理</h1>
+                    <div class="header-actions">
+                        <button class="btn btn-primary" onclick="goToAddCustomer()">
+                            <i class="fas fa-plus"></i> 添加客户
+                        </button>
+                        <button class="btn btn-secondary" onclick="exportData('customers')">
+                            <i class="fas fa-download"></i> 导出数据
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <div class="dashboard">
+                <div class="table-container">
+                    <div class="table-header">
+                        <h2>客户列表</h2>
+                        <div class="table-actions">
+                            <input type="text" id="customerSearch" placeholder="搜索客户...">
+                        </div>
+                    </div>
+                    <table id="customerTable">
+                        <thead>
+                            <tr>
+                                <th>客户ID</th>
+                                <th>公司名称</th>
+                                <th>联系人</th>
+                                <th>联系电话</th>
+                                <th>邮箱</th>
+                                <th>垫入成本</th>
+                                <th>房间号</th>
+                                <th>租赁期间</th>
+                                <th>合同金额</th>
+                                <th>已收金额</th>
+                                <th>保证金</th>
+                                <th>创建时间</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for customer in customers %}
+                                {% if customer.rental_details %}
+                                    {% for detail in customer.rental_details %}
+                                    <tr>
+                                        <td>{{ customer.customer_id }}</td>
+                                        <td>{{ customer.company_name }}</td>
+                                        <td>{{ customer.contact_person }}</td>
+                                        <td>{{ customer.contact_phone }}</td>
+                                        <td>{{ customer.contact_email or '-' }}</td>
+                                        <td>{{ "%.2f"|format(customer.advance_cost or 0) }}</td>
+                                        <td><span class="room-number">{{ detail.room_number }}</span></td>
+                                        <td>{{ detail.start_date }} ~ {{ detail.end_date }}</td>
+                                        <td class="amount-positive">¥{{ "%.2f"|format(detail.contract_amount) }}</td>
+                                        <td class="{% if detail.received_amount > 0 %}amount-positive{% else %}amount-zero{% endif %}">¥{{ "%.2f"|format(detail.received_amount) }}</td>
+                                        <td><span class="deposit-info">¥{{ "%.2f"|format(detail.deposit_contract) }}</span> <span class="deposit-received">(已收: ¥{{ "%.2f"|format(detail.deposit_received) }})</span></td>
+                                        <td>{{ customer.created_at.strftime('%Y-%m-%d') }}</td>
+                                        <td>
+                                            <button class="btn btn-secondary btn-sm" data-customer-id="{{ customer.id }}" onclick="editCustomer(this.dataset.customerId)">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="btn btn-danger btn-sm" data-customer-id="{{ customer.id }}" onclick="deleteCustomer(this.dataset.customerId)">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                    {% endfor %}
+                                {% else %}
+                                    <tr>
+                                        <td>{{ customer.customer_id }}</td>
+                                        <td>{{ customer.company_name }}</td>
+                                        <td>{{ customer.contact_person }}</td>
+                                        <td>{{ customer.contact_phone }}</td>
+                                        <td>{{ customer.contact_email or '-' }}</td>
+                                        <td>{{ "%.2f"|format(customer.advance_cost or 0) }}</td>
+                                        <td><span class="text-muted">无租赁记录</span></td>
+                                        <td>-</td>
+                                        <td>-</td>
+                                        <td>-</td>
+                                        <td>-</td>
+                                        <td>{{ customer.created_at.strftime('%Y-%m-%d') }}</td>
+                                        <td>
+                                            <button class="btn btn-secondary btn-sm" data-customer-id="{{ customer.id }}" onclick="editCustomer(this.dataset.customerId)">
+                                                <i class="fas fa-edit"></i>
+                                            </button>
+                                            <button class="btn btn-danger btn-sm" data-customer-id="{{ customer.id }}" onclick="deleteCustomer(this.dataset.customerId)">
+                                                <i class="fas fa-trash"></i>
+                                            </button>
+                                        </td>
+                                    </tr>
+                                {% endif %}
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+        function editCustomer(customerId) {
+            location.href = `/customers/${customerId}/edit`;
+        }
+        
+        function deleteCustomer(customerId) {
+            const customerName = document.querySelector(`[data-customer-id="${customerId}"]`).closest('tr').cells[1].textContent;
+            if (confirm(`⚠️ 重要操作提醒\n\n您即将删除客户：${customerName}\n\n此操作将同时删除：\n• 该客户的所有合同\n• 相关的租金计划\n• 所有收款记录\n• 相关发票\n\n此操作不可撤销！\n\n确定要继续吗？`)) {
+                fetch(`/customers/${customerId}/delete`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        showNotification('✅ 客户删除成功！', 'success');
+                        setTimeout(() => location.reload(), 1500);
+                    } else {
+                        showNotification('❌ 删除失败：' + result.message, 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('删除失败:', error);
+                    alert('删除失败，请重试');
+                });
+            }
+        }
+    </script>
+</body>
+</html>

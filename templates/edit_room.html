@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>编辑房间 - 租赁管理系统</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <h2><i class="fas fa-building"></i> 租赁管理</h2>
+            </div>
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a href="{{ url_for('index') }}" class="nav-link">
+                        <i class="fas fa-home"></i>
+                        <span>首页</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('customers') }}" class="nav-link">
+                        <i class="fas fa-users"></i>
+                        <span>客户管理</span>
+                    </a>
+                </li>
+                <li class="nav-item active">
+                    <a href="{{ url_for('rooms') }}" class="nav-link">
+                        <i class="fas fa-door-open"></i>
+                        <span>房间管理</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('contracts') }}" class="nav-link">
+                        <i class="fas fa-file-contract"></i>
+                        <span>合同管理</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('payments') }}" class="nav-link">
+                        <i class="fas fa-money-bill-wave"></i>
+                        <span>收款管理</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('rent_plans') }}" class="nav-link">
+                        <i class="fas fa-calendar-alt"></i>
+                        <span>租金计划</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('statistics') }}" class="nav-link">
+                        <i class="fas fa-chart-bar"></i>
+                        <span>统计分析</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('import_data') }}" class="nav-link">
+                        <i class="fas fa-upload"></i>
+                        <span>数据导入</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+
+        <main class="main-content">
+            <header class="header">
+                <div class="header-content">
+                    <h1>编辑房间</h1>
+                    <div class="header-actions">
+                        <button class="btn btn-secondary" onclick="goToRooms()">
+                            <i class="fas fa-arrow-left"></i> 返回
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <div class="dashboard">
+                <div class="table-container">
+                    <div class="table-header">
+                        <h2>房间信息</h2>
+                    </div>
+                    <div class="modal-body">
+                        <form id="roomForm">
+                            <div class="form-group">
+                                <label>房间号</label>
+                                <input type="text" name="room_number" value="{{ room.room_number }}" required>
+                            </div>
+                            <div class="form-group">
+                                <label>面积 (平方米)</label>
+                                <input type="number" step="0.01" name="area" value="{{ room.area }}" required>
+                            </div>
+                            <div class="form-group">
+                                <label>楼层</label>
+                                <input type="text" name="floor" value="{{ room.floor }}" required>
+                            </div>
+                            <div class="form-group">
+                                <label>单价 (元/㎡/月)</label>
+                                <input type="number" step="0.01" name="unit_price" value="{{ room.unit_price }}" required>
+                            </div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary" onclick="return confirmRoomUpdate()">
+                                    <i class="fas fa-save"></i> 更新
+                                </button>
+                                <button type="button" class="btn btn-secondary" onclick="goToRooms()">
+                                    取消
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+        function goToRooms() {
+            location.href = '{{ url_for("rooms") }}';
+        }
+        
+        function confirmRoomUpdate() {
+            const form = document.getElementById('roomForm');
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData);
+            
+            // 检查必填字段
+            if (!data.room_number || !data.area || !data.floor || !data.unit_price) {
+                showNotification('⚠️ 请填写所有必填字段', 'warning');
+                return false;
+            }
+            
+            // 检查数值
+            if (parseFloat(data.area) <= 0) {
+                showNotification('⚠️ 面积必须大于0', 'warning');
+                return false;
+            }
+            
+            if (parseFloat(data.unit_price) <= 0) {
+                showNotification('⚠️ 单价必须大于0', 'warning');
+                return false;
+            }
+            
+            if (!confirm(`🏢 房间更新确认\n\n您即将更新房间：${data.room_number}\n\n此操作将：\n• 更新房间信息\n• 可能影响相关合同\n• 发送相关通知\n\n确定要更新吗？`)) {
+                return false;
+            }
+            
+            return true;
+        }
+        
+        document.getElementById('roomForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            const data = Object.fromEntries(formData);
+            
+            fetch('{{ url_for("edit_room", room_id=room.id) }}', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    showNotification(result.message, 'success');
+                    setTimeout(() => {
+                        location.href = '/rooms';
+                    }, 1000);
+                } else {
+                    showNotification(result.message, 'error');
+                }
+            });
+        });
+    </script>
+</body>
+</html>

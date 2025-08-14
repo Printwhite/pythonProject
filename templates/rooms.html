@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>房间管理 - 租赁管理系统</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <h2><i class="fas fa-building"></i> 租赁管理</h2>
+            </div>
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a href="{{ url_for('index') }}" class="nav-link">
+                        <i class="fas fa-home"></i>
+                        <span>首页</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('customers') }}" class="nav-link">
+                        <i class="fas fa-users"></i>
+                        <span>客户管理</span>
+                    </a>
+                </li>
+                <li class="nav-item active">
+                    <a href="{{ url_for('rooms') }}" class="nav-link">
+                        <i class="fas fa-door-open"></i>
+                        <span>房间管理</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('contracts') }}" class="nav-link">
+                        <i class="fas fa-file-contract"></i>
+                        <span>合同管理</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('payments') }}" class="nav-link">
+                        <i class="fas fa-money-bill-wave"></i>
+                        <span>收款管理</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('rent_plans') }}" class="nav-link">
+                        <i class="fas fa-calendar-alt"></i>
+                        <span>租金计划</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('statistics') }}" class="nav-link">
+                        <i class="fas fa-chart-bar"></i>
+                        <span>统计分析</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('import_data') }}" class="nav-link">
+                        <i class="fas fa-upload"></i>
+                        <span>数据导入</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+
+        <main class="main-content">
+            <header class="header">
+                <div class="header-content">
+                    <h1>房间管理</h1>
+                    <div class="header-actions">
+                        <button class="btn btn-primary" onclick="goToAddRoom()">
+                            <i class="fas fa-plus"></i> 添加房间
+                        </button>
+                        <button class="btn btn-secondary" onclick="exportData('rooms')">
+                            <i class="fas fa-download"></i> 导出数据
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <div class="dashboard">
+                <!-- 房间统计概览 -->
+                <div class="stats-overview">
+                    <div class="overview-card">
+                        <div class="overview-header">
+                            <i class="fas fa-door-open"></i>
+                            <span>房间统计</span>
+                        </div>
+                        <div class="overview-content">
+                            <div class="overview-item">
+                                <span class="label">总房间数:</span>
+                                <span class="value">{{ total_rooms }}</span>
+                            </div>
+                            <div class="overview-item">
+                                <span class="label">已租房间:</span>
+                                <span class="value">{{ occupied_rooms }}</span>
+                            </div>
+                            <div class="overview-item">
+                                <span class="label">空置房间:</span>
+                                <span class="value">{{ vacant_rooms }}</span>
+                            </div>
+                            <div class="overview-item">
+                                <span class="label">出租率(按房间):</span>
+                                <span class="value">
+                                    {% if total_rooms > 0 %}
+                                        {{ "%.1f"|format(occupied_rooms / total_rooms * 100) }}%
+                                    {% else %}
+                                        0%
+                                    {% endif %}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="overview-card">
+                        <div class="overview-header">
+                            <i class="fas fa-ruler-combined"></i>
+                            <span>面积统计</span>
+                        </div>
+                        <div class="overview-content">
+                            <div class="overview-item">
+                                <span class="label">总面积:</span>
+                                <span class="value">{{ "%.1f"|format(total_area) }} ㎡</span>
+                            </div>
+                            <div class="overview-item">
+                                <span class="label">已租面积:</span>
+                                <span class="value">{{ "%.1f"|format(occupied_area) }} ㎡</span>
+                            </div>
+                            <div class="overview-item">
+                                <span class="label">空置面积:</span>
+                                <span class="value">{{ "%.1f"|format(vacant_area) }} ㎡</span>
+                            </div>
+                            <div class="overview-item">
+                                <span class="label">出租率(按面积):</span>
+                                <span class="value">
+                                    {% if total_area > 0 %}
+                                        {{ "%.1f"|format(occupied_area / total_area * 100) }}%
+                                    {% else %}
+                                        0%
+                                    {% endif %}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="table-container">
+                    <div class="table-header">
+                        <h2>房间列表</h2>
+                        <div class="table-actions">
+                            <input type="text" id="roomSearch" placeholder="搜索房间...">
+                        </div>
+                    </div>
+                    <table id="roomTable">
+                        <thead>
+                            <tr>
+                                <th>房间号</th>
+                                <th>面积 (㎡)</th>
+                                <th>楼层</th>
+                                <th>单价 (元/㎡/月)</th>
+                                <th>客户名称</th>
+                                <th>状态</th>
+                                <th>创建时间</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for room in rooms %}
+                            <tr>
+                                <td>{{ room.room_number }}</td>
+                                <td>{{ room.area }}</td>
+                                <td>{{ room.floor }}</td>
+                                <td>{{ room.unit_price }}</td>
+                                <td>
+                                    {% if room.contracts %}
+                                        {% for contract in room.contracts %}
+                                            {% if contract.status == '有效' %}
+                                                {{ contract.customer.company_name }}
+                                            {% endif %}
+                                        {% endfor %}
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="status-badge {% if room.status == '空置' %}status-active{% else %}status-inactive{% endif %}">
+                                        {{ room.status }}
+                                    </span>
+                                </td>
+                                <td>{{ room.created_at.strftime('%Y-%m-%d') }}</td>
+                                <td>
+                                    <button class="btn btn-secondary btn-sm" data-room-id="{{ room.id }}" onclick="editRoom(this.dataset.roomId)">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-danger btn-sm" data-room-id="{{ room.id }}" onclick="deleteRoom(this.dataset.roomId)">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+        function editRoom(roomId) {
+            location.href = `/rooms/${roomId}/edit`;
+        }
+        
+        function deleteRoom(roomId) {
+            const roomNumber = document.querySelector(`[data-room-id="${roomId}"]`).closest('tr').cells[0].textContent;
+            if (confirm(`⚠️ 重要操作提醒\n\n您即将删除房间：${roomNumber}\n\n此操作将同时删除：\n• 该房间的所有合同\n• 相关的租金计划\n• 所有收款记录\n• 相关发票\n\n此操作不可撤销！\n\n确定要继续吗？`)) {
+                fetch(`/rooms/${roomId}/delete`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        showNotification('✅ 房间删除成功！', 'success');
+                        setTimeout(() => location.reload(), 1500);
+                    } else {
+                        showNotification('❌ 删除失败：' + result.message, 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('删除失败:', error);
+                    alert('删除失败，请重试');
+                });
+            }
+        }
+    </script>
+</body>
+</html>

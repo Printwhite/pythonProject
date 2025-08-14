@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>统计分析 - 租赁管理系统</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <h2><i class="fas fa-building"></i> 租赁管理</h2>
+            </div>
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a href="{{ url_for('index') }}" class="nav-link">
+                        <i class="fas fa-home"></i>
+                        <span>首页</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('customers') }}" class="nav-link">
+                        <i class="fas fa-users"></i>
+                        <span>客户管理</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('rooms') }}" class="nav-link">
+                        <i class="fas fa-door-open"></i>
+                        <span>房间管理</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('contracts') }}" class="nav-link">
+                        <i class="fas fa-file-contract"></i>
+                        <span>合同管理</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('payments') }}" class="nav-link">
+                        <i class="fas fa-money-bill-wave"></i>
+                        <span>收款管理</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('rent_plans') }}" class="nav-link">
+                        <i class="fas fa-calendar-alt"></i>
+                        <span>租金计划</span>
+                    </a>
+                </li>
+                <li class="nav-item active">
+                    <a href="{{ url_for('statistics') }}" class="nav-link">
+                        <i class="fas fa-chart-bar"></i>
+                        <span>统计分析</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('import_data') }}" class="nav-link">
+                        <i class="fas fa-upload"></i>
+                        <span>数据导入</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+
+        <main class="main-content">
+            <header class="header">
+                <div class="header-content">
+                    <h1>统计分析</h1>
+                </div>
+            </header>
+
+            <div class="dashboard">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-users"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3>{{ total_customers }}</h3>
+                            <p>总客户数</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-door-open"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3>{{ total_rooms }}</h3>
+                            <p>总房间数</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-door-closed"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3>{{ occupied_rooms }}</h3>
+                            <p>已租房间</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-file-contract"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3>{{ total_contracts }}</h3>
+                            <p>总合同数</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3>{{ active_contracts }}</h3>
+                            <p>有效合同</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-money-bill-wave"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3>¥{{ "%.2f"|format(total_due) }}</h3>
+                            <p>本月应收</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-check"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3>¥{{ "%.2f"|format(total_received) }}</h3>
+                            <p>本月已收</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-exclamation-triangle"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3>¥{{ "%.2f"|format(total_unpaid) }}</h3>
+                            <p>本月未收</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <div class="table-header">
+                        <h2>房间使用率统计</h2>
+                        <div class="table-actions">
+                            <button class="export-btn" onclick="exportStatisticsCSV()">
+                                <i class="fas fa-download"></i>
+                                导出统计汇总
+                            </button>
+                        </div>
+                    </div>
+                    <div class="modal-body">
+                        <div class="usage-stats">
+                            <div class="usage-item">
+                                <div class="usage-label">房间使用率</div>
+                                <div class="usage-value">{{ "%.1f"|format(occupied_rooms / total_rooms * 100 if total_rooms > 0 else 0) }}%</div>
+                                <div class="usage-bar">
+                                    <div class="usage-fill" style="width: {{ occupied_rooms / total_rooms * 100 if total_rooms > 0 else 0 }}%"></div>
+                                </div>
+                            </div>
+                            <div class="usage-item">
+                                <div class="usage-label">合同有效率</div>
+                                <div class="usage-value">{{ "%.1f"|format(active_contracts / total_contracts * 100 if total_contracts > 0 else 0) }}%</div>
+                                <div class="usage-bar">
+                                    <div class="usage-fill" style="width: {{ active_contracts / total_contracts * 100 if total_contracts > 0 else 0 }}%"></div>
+                                </div>
+                            </div>
+                            <div class="usage-item">
+                                <div class="usage-label">收款率</div>
+                                <div class="usage-value">{{ "%.1f"|format(total_received / total_due * 100 if total_due > 0 else 0) }}%</div>
+                                <div class="usage-bar">
+                                    <div class="usage-fill" style="width: {{ total_received / total_due * 100 if total_due > 0 else 0 }}%"></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <div class="table-header">
+                        <h2>按月份计划收款</h2>
+                        <div class="table-actions">
+                            <select id="monthYearSelect" onchange="loadMonthlyPlans()">
+                                <option value="">选择年月</option>
+                            </select>
+                            <button class="export-btn" onclick="exportMonthlyPlansCSV()">
+                                <i class="fas fa-download"></i>
+                                导出月度计划
+                            </button>
+                        </div>
+                    </div>
+                    <div class="modal-body">
+                        <div id="monthlyPlansSummary" class="plans-summary"></div>
+                        <table id="monthlyPlansTable" style="display: none;">
+                            <thead>
+                                <tr>
+                                    <th>合同编号</th>
+                                    <th>房间号</th>
+                                    <th>客户名称</th>
+                                    <th>应收金额</th>
+                                    <th>状态</th>
+                                    <th>到期日</th>
+                                    <th>天数</th>
+                                </tr>
+                            </thead>
+                            <tbody id="monthlyPlansBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="table-container">
+                    <div class="table-header">
+                        <h2>按房间计划收款</h2>
+                        <div class="table-actions">
+                            <select id="roomSelect" onchange="loadRoomPlans()">
+                                <option value="">选择房间</option>
+                            </select>
+                            <button class="export-btn" onclick="exportRoomPlansCSV()">
+                                <i class="fas fa-download"></i>
+                                导出房间计划
+                            </button>
+                        </div>
+                    </div>
+                    <div class="modal-body">
+                        <div id="roomPlansSummary" class="plans-summary"></div>
+                        <table id="roomPlansTable" style="display: none;">
+                            <thead>
+                                <tr>
+                                    <th>合同编号</th>
+                                    <th>房间号</th>
+                                    <th>客户名称</th>
+                                    <th>年月</th>
+                                    <th>应收金额</th>
+                                    <th>状态</th>
+                                    <th>到期日</th>
+                                    <th>天数</th>
+                                </tr>
+                            </thead>
+                            <tbody id="roomPlansBody"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <style>
+        /* stylelint-disable */
+        .usage-stats {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+        .usage-item {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+        .usage-label {
+            min-width: 100px;
+            font-weight: 500;
+        }
+        .usage-value {
+            min-width: 80px;
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+        .usage-bar {
+            flex: 1;
+            height: 8px;
+            background: var(--background-color);
+            border-radius: 4px;
+            overflow: hidden;
+        }
+        .usage-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+            border-radius: 4px;
+            transition: width 0.3s ease;
+        }
+        .plans-summary {
+            display: flex;
+            gap: 20px;
+            margin-bottom: 20px;
+            padding: 15px;
+            background: var(--background-color);
+            border-radius: 8px;
+        }
+        .summary-item {
+            text-align: center;
+        }
+        .summary-label {
+            font-size: 12px;
+            color: var(--text-secondary);
+        }
+        .summary-value {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--primary-color);
+        }
+        /* stylelint-enable */
+    </style>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            initializeMonthYearSelect();
+            initializeRoomSelect();
+        });
+
+        function initializeMonthYearSelect() {
+            const select = document.getElementById('monthYearSelect');
+            const currentYear = new Date().getFullYear();
+            const currentMonth = new Date().getMonth() + 1;
+            
+            for (let year = currentYear - 2; year <= currentYear + 1; year++) {
+                for (let month = 1; month <= 12; month++) {
+                    const option = document.createElement('option');
+                    option.value = `${year}-${month.toString().padStart(2, '0')}`;
+                    option.textContent = `${year}年${month}月`;
+                    if (year === currentYear && month === currentMonth) {
+                        option.selected = true;
+                    }
+                    select.appendChild(option);
+                }
+            }
+            
+            loadMonthlyPlans();
+        }
+
+        function initializeRoomSelect() {
+            fetch('/api/rooms/available')
+                .then(response => response.json())
+                .then(data => {
+                    const select = document.getElementById('roomSelect');
+                    data.rooms.forEach(room => {
+                        const option = document.createElement('option');
+                        option.value = room.id;
+                        option.textContent = `${room.room_number} (${room.floor}层)`;
+                        select.appendChild(option);
+                    });
+                });
+        }
+
+        function loadMonthlyPlans() {
+            const select = document.getElementById('monthYearSelect');
+            const value = select.value;
+            if (!value) return;
+            
+            const [year, month] = value.split('-');
+            
+            fetch(`/api/statistics/monthly_plans?year=${year}&month=${month}`)
+                .then(response => response.json())
+                .then(data => {
+                    displayMonthlyPlans(data);
+                });
+        }
+
+        function loadRoomPlans() {
+            const select = document.getElementById('roomSelect');
+            const roomId = select.value;
+            if (!roomId) return;
+            
+            fetch(`/api/statistics/room_plans?room_id=${roomId}`)
+                .then(response => response.json())
+                .then(data => {
+                    displayRoomPlans(data);
+                });
+        }
+
+        function displayMonthlyPlans(data) {
+            const summary = document.getElementById('monthlyPlansSummary');
+            const table = document.getElementById('monthlyPlansTable');
+            const tbody = document.getElementById('monthlyPlansBody');
+            
+            summary.innerHTML = `
+                <div class="summary-item">
+                    <div class="summary-label">总应收</div>
+                    <div class="summary-value">¥${data.summary.total_amount.toFixed(2)}</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-label">已收款</div>
+                    <div class="summary-value">¥${data.summary.total_received.toFixed(2)}</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-label">未收款</div>
+                    <div class="summary-value">¥${data.summary.total_unpaid.toFixed(2)}</div>
+                </div>
+            `;
+            
+            tbody.innerHTML = '';
+            data.plans.forEach(plan => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${plan.contract_number}</td>
+                    <td>${plan.room_number}</td>
+                    <td>${plan.customer_name}</td>
+                    <td>¥${plan.amount.toFixed(2)}</td>
+                    <td><span class="status-badge status-${plan.status}">${plan.status}</span></td>
+                    <td>${plan.due_date}</td>
+                    <td>${plan.days}天</td>
+                `;
+                tbody.appendChild(row);
+            });
+            
+            table.style.display = data.plans.length > 0 ? 'table' : 'none';
+        }
+
+        function displayRoomPlans(data) {
+            const summary = document.getElementById('roomPlansSummary');
+            const table = document.getElementById('roomPlansTable');
+            const tbody = document.getElementById('roomPlansBody');
+            
+            summary.innerHTML = `
+                <div class="summary-item">
+                    <div class="summary-label">总应收</div>
+                    <div class="summary-value">¥${data.summary.total_amount.toFixed(2)}</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-label">已收款</div>
+                    <div class="summary-value">¥${data.summary.total_received.toFixed(2)}</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-label">未收款</div>
+                    <div class="summary-value">¥${data.summary.total_unpaid.toFixed(2)}</div>
+                </div>
+            `;
+            
+            tbody.innerHTML = '';
+            data.plans.forEach(plan => {
+                const row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${plan.contract_number}</td>
+                    <td>${plan.room_number}</td>
+                    <td>${plan.customer_name}</td>
+                    <td>${plan.year}年${plan.month}月</td>
+                    <td>¥${plan.amount.toFixed(2)}</td>
+                    <td><span class="status-badge status-${plan.status}">${plan.status}</span></td>
+                    <td>${plan.due_date}</td>
+                    <td>${plan.days}天</td>
+                `;
+                tbody.appendChild(row);
+            });
+            
+            table.style.display = data.plans.length > 0 ? 'table' : 'none';
+        }
+
+        // CSV导出功能
+        function exportStatisticsCSV() {
+            if (confirm('📊 导出确认\n\n您即将导出：统计分析汇总数据\n\n导出文件将包含：\n• 总客户数、房间数、合同数\n• 房间使用率、合同有效率\n• 本月应收、已收、未收金额\n• 收款率等关键指标\n\n确定要导出吗？')) {
+                showNotification('📤 正在导出统计分析汇总...', 'info');
+                window.location.href = '/export/csv/statistics_summary';
+            }
+        }
+
+        function exportMonthlyPlansCSV() {
+            const select = document.getElementById('monthYearSelect');
+            const value = select.value;
+            
+            if (!value) {
+                showNotification('⚠️ 请先选择年月', 'warning');
+                return;
+            }
+            
+            const [year, month] = value.split('-');
+            
+            if (confirm(`📊 导出确认\n\n您即将导出：${year}年${month}月收款计划\n\n导出文件将包含：\n• 合同编号、房间号、客户名称\n• 应收金额、已收金额、未收金额\n• 状态、到期日、剩余天数\n\n确定要导出吗？`)) {
+                showNotification(`📤 正在导出${year}年${month}月收款计划...`, 'info');
+                window.location.href = `/export/csv/monthly_plans?year=${year}&month=${month}`;
+            }
+        }
+
+        function exportRoomPlansCSV() {
+            const select = document.getElementById('roomSelect');
+            const roomId = select.value;
+            
+            if (!roomId) {
+                showNotification('⚠️ 请先选择房间', 'warning');
+                return;
+            }
+            
+            const roomName = select.options[select.selectedIndex].text;
+            
+            if (confirm(`📊 导出确认\n\n您即将导出：${roomName}收款计划\n\n导出文件将包含：\n• 合同编号、房间号、客户名称\n• 年月、应收金额、已收金额\n• 未收金额、状态、到期日\n• 剩余天数\n\n确定要导出吗？`)) {
+                showNotification(`📤 正在导出${roomName}收款计划...`, 'info');
+                window.location.href = `/export/csv/room_plans?room_id=${roomId}`;
+            }
+        }
+    </script>
+</body>
+</html>

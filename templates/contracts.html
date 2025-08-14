@@ -1,0 +1,245 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>合同管理 - 租赁管理系统</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <h2><i class="fas fa-building"></i> 租赁管理</h2>
+            </div>
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a href="{{ url_for('index') }}" class="nav-link">
+                        <i class="fas fa-home"></i>
+                        <span>首页</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('customers') }}" class="nav-link">
+                        <i class="fas fa-users"></i>
+                        <span>客户管理</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('rooms') }}" class="nav-link">
+                        <i class="fas fa-door-open"></i>
+                        <span>房间管理</span>
+                    </a>
+                </li>
+                <li class="nav-item active">
+                    <a href="{{ url_for('contracts') }}" class="nav-link">
+                        <i class="fas fa-file-contract"></i>
+                        <span>合同管理</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('payments') }}" class="nav-link">
+                        <i class="fas fa-money-bill-wave"></i>
+                        <span>收款管理</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('rent_plans') }}" class="nav-link">
+                        <i class="fas fa-calendar-alt"></i>
+                        <span>租金计划</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('statistics') }}" class="nav-link">
+                        <i class="fas fa-chart-bar"></i>
+                        <span>统计分析</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('import_data') }}" class="nav-link">
+                        <i class="fas fa-upload"></i>
+                        <span>数据导入</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+
+        <main class="main-content">
+            <header class="header">
+                <div class="header-content">
+                    <h1>合同管理</h1>
+                    <div class="header-actions">
+                        <button class="btn btn-primary" onclick="goToAddContract()">
+                            <i class="fas fa-plus"></i> 添加合同
+                        </button>
+                        <button class="btn btn-secondary" onclick="exportData('contracts')">
+                            <i class="fas fa-download"></i> 导出数据
+                        </button>
+                    </div>
+                </div>
+            </header>
+
+            <div class="dashboard">
+                <div class="stats-cards">
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-file-contract"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3>总合同数</h3>
+                            <p class="stat-number">{{ contracts|length }}</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-check-circle"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3>有效合同</h3>
+                            <p class="stat-number">{{ contracts|selectattr('status', 'equalto', '有效')|list|length }}</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-times-circle"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3>无效合同</h3>
+                            <p class="stat-number">{{ contracts|selectattr('status', 'equalto', '无效')|list|length }}</p>
+                        </div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-icon">
+                            <i class="fas fa-calendar-check"></i>
+                        </div>
+                        <div class="stat-content">
+                            <h3>本月到期</h3>
+                            <p class="stat-number" id="expiringThisMonth">-</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="table-container">
+                    <div class="table-header">
+                        <h2>合同列表</h2>
+                        <div class="table-actions">
+                            <input type="text" id="contractSearch" placeholder="搜索合同...">
+                        </div>
+                    </div>
+                    <table id="contractTable">
+                        <thead>
+                            <tr>
+                                <th>合同编号</th>
+                                <th>客户名称</th>
+                                <th>单元号</th>
+                                <th>面积(㎡)</th>
+                                <th>租赁期间</th>
+                                <th>单价(元/㎡/月)</th>
+                                <th>月租金(元)</th>
+                                <th>年租金(元)</th>
+                                <th>合同金额(元)</th>
+                                <th>付款周期</th>
+                                <th>收款金额(元)</th>
+                                <th>保证金(元)</th>
+                                <th>状态</th>
+                                <th>操作</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for contract in contracts %}
+                            <tr>
+                                <td>{{ contract.contract_number }}</td>
+                                <td>{{ contract.customer.company_name }}</td>
+                                <td>{{ contract.room.room_number if contract.room else '未知房间' }}</td>
+                                <td>{{ "%.2f"|format(contract.room.area if contract.room else 0) }}</td>
+                                <td>{{ contract.start_date.strftime('%Y-%m-%d') }} 至 {{ contract.end_date.strftime('%Y-%m-%d') }}</td>
+                                <td>¥{{ "%.2f"|format(contract.unit_price) }}</td>
+                                <td>¥{{ "%.2f"|format(contract.monthly_rent) }}</td>
+                                <td>¥{{ "%.2f"|format(contract.yearly_rent) }}</td>
+                                <td>¥{{ "%.2f"|format(contract.contract_amount) }}</td>
+                                <td>{{ contract.payment_frequency }}</td>
+                                <td>¥{{ "%.2f"|format(contract.received_amount) }}</td>
+                                <td>¥{{ "%.2f"|format(contract.deposit_contract) }}</td>
+                                <td>
+                                    <span class="status-badge {% if contract.status == '有效' %}status-active{% elif contract.status == '待生效' %}status-pending{% else %}status-inactive{% endif %}">
+                                        {{ contract.status }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <button class="btn btn-secondary btn-sm" data-contract-id="{{ contract.id }}" onclick="editContract(this.dataset.contractId)">
+                                        <i class="fas fa-edit"></i>
+                                    </button>
+                                    <button class="btn btn-danger btn-sm" data-contract-id="{{ contract.id }}" onclick="deleteContract(this.dataset.contractId)">
+                                        <i class="fas fa-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            calculateExpiringContracts();
+        });
+        
+        function calculateExpiringContracts() {
+            const now = new Date();
+            const currentMonth = now.getMonth() + 1; // JavaScript月份从0开始
+            const currentYear = now.getFullYear();
+            
+            const table = document.getElementById('contractTable');
+            const rows = table.getElementsByTagName('tbody')[0].getElementsByTagName('tr');
+            
+            let expiringCount = 0;
+            
+            for (let row of rows) {
+                const endDateCell = row.cells[4]; // 租期结束列
+                const endDateText = endDateCell.textContent;
+                const endDate = new Date(endDateText);
+                
+                if (endDate.getMonth() + 1 === currentMonth && endDate.getFullYear() === currentYear) {
+                    expiringCount++;
+                }
+            }
+            
+            document.getElementById('expiringThisMonth').textContent = expiringCount;
+        }
+        
+        function editContract(contractId) {
+            location.href = `/contracts/${contractId}/edit`;
+        }
+        
+        function deleteContract(contractId) {
+            const contractNumber = document.querySelector(`[data-contract-id="${contractId}"]`).closest('tr').cells[0].textContent;
+            if (confirm(`⚠️ 重要操作提醒\n\n您即将删除合同：${contractNumber}\n\n此操作将同时删除：\n• 相关的租金计划\n• 所有收款记录\n• 相关发票\n• 房间状态将改为空置\n\n此操作不可撤销！\n\n确定要继续吗？`)) {
+                fetch(`/contracts/${contractId}/delete`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    }
+                })
+                .then(response => response.json())
+                .then(result => {
+                    if (result.success) {
+                        showNotification('✅ 合同删除成功！', 'success');
+                        setTimeout(() => location.reload(), 1500);
+                    } else {
+                        showNotification('❌ 删除失败：' + result.message, 'error');
+                    }
+                })
+                .catch(error => {
+                    console.error('删除失败:', error);
+                    alert('删除失败，请重试');
+                });
+            }
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,185 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>数据导入 - 租赁管理系统</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <nav class="sidebar">
+            <div class="sidebar-header">
+                <h2><i class="fas fa-building"></i> 租赁管理</h2>
+            </div>
+            <ul class="nav-menu">
+                <li class="nav-item">
+                    <a href="{{ url_for('index') }}" class="nav-link">
+                        <i class="fas fa-home"></i>
+                        <span>首页</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('customers') }}" class="nav-link">
+                        <i class="fas fa-users"></i>
+                        <span>客户管理</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('rooms') }}" class="nav-link">
+                        <i class="fas fa-door-open"></i>
+                        <span>房间管理</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('contracts') }}" class="nav-link">
+                        <i class="fas fa-file-contract"></i>
+                        <span>合同管理</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('payments') }}" class="nav-link">
+                        <i class="fas fa-money-bill-wave"></i>
+                        <span>收款管理</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('rent_plans') }}" class="nav-link">
+                        <i class="fas fa-calendar-alt"></i>
+                        <span>租金计划</span>
+                    </a>
+                </li>
+                <li class="nav-item">
+                    <a href="{{ url_for('statistics') }}" class="nav-link">
+                        <i class="fas fa-chart-bar"></i>
+                        <span>统计分析</span>
+                    </a>
+                </li>
+                <li class="nav-item active">
+                    <a href="{{ url_for('import_data') }}" class="nav-link">
+                        <i class="fas fa-upload"></i>
+                        <span>数据导入</span>
+                    </a>
+                </li>
+            </ul>
+        </nav>
+
+        <main class="main-content">
+            <header class="header">
+                <div class="header-content">
+                    <h1>数据导入</h1>
+                </div>
+            </header>
+
+            <div class="dashboard">
+                <div class="table-container">
+                    <div class="table-header">
+                        <h2>Excel数据导入</h2>
+                        <div class="table-actions">
+                            <a href="{{ url_for('download_template') }}" class="btn btn-secondary">
+                                <i class="fas fa-download"></i> 下载模板
+                            </a>
+                        </div>
+                    </div>
+                    <div class="modal-body">
+                        <form id="importForm" enctype="multipart/form-data">
+                            <div class="form-group">
+                                <label>选择Excel文件</label>
+                                <input type="file" name="file" accept=".xlsx,.xls" required>
+                                <small>支持.xlsx和.xls格式的Excel文件</small>
+                            </div>
+                            <div class="form-group">
+                                <label>Excel文件格式说明</label>
+                                <div class="format-info">
+                                    <p>Excel文件应包含以下列：</p>
+                                    <ul>
+                                        <li>公司名称 - 客户公司名称</li>
+                                        <li>联系人 - 客户联系人</li>
+                                        <li>联系方式 - 联系电话</li>
+                                        <li>邮箱 - 客户邮箱（可选）</li>
+                                        <li>房间号 - 房间编号</li>
+                                        <li>面积 - 房间面积</li>
+                                        <li>楼层 - 房间楼层</li>
+                                        <li>单价（元/㎡/月）- 租金单价</li>
+                                        <li>合同编号 - 租赁合同编号</li>
+                                        <li>租期开始时间 - 合同开始日期</li>
+                                        <li>租期结束时间 - 合同结束日期</li>
+                                        <li>支付方式 - 租金支付方式</li>
+                                        <li>租赁保证金（合同约定）- 约定保证金</li>
+                                        <li>租赁保证金（实收）- 实收保证金</li>
+                                        <li>付款日 - 每月付款日期</li>
+                                        <li>收款方式 - 收款方式</li>
+                                        <li>开票方式 - 开票方式</li>
+                                        <li>备注 - 备注信息（可选）</li>
+                                    </ul>
+                                </div>
+                            </div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-primary" onclick="return confirmImport()">
+                                    <i class="fas fa-upload"></i> 开始导入
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script>
+        function confirmImport() {
+            const fileInput = document.querySelector('input[type="file"]');
+            if (!fileInput.files[0]) {
+                showNotification('⚠️ 请先选择要导入的Excel文件', 'warning');
+                return false;
+            }
+            
+            const fileName = fileInput.files[0].name;
+            if (!confirm(`⚠️ 数据导入确认\n\n您即将导入文件：${fileName}\n\n此操作将：\n• 创建新的客户、房间和合同记录\n• 生成相应的租金计划\n• 可能覆盖现有数据\n\n确定要继续吗？`)) {
+                return false;
+            }
+            
+            return true;
+        }
+        
+        document.getElementById('importForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            const formData = new FormData(this);
+            
+            fetch('/import', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result.success) {
+                    showNotification(result.message, 'success');
+                    setTimeout(() => {
+                        location.href = '/';
+                    }, 2000);
+                } else {
+                    showNotification(result.message, 'error');
+                }
+            });
+        });
+    </script>
+    <style>
+        .format-info {
+            background: var(--background-color);
+            padding: 15px;
+            border-radius: var(--border-radius-small);
+            margin-top: 10px;
+        }
+        .format-info ul {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        .format-info li {
+            margin: 5px 0;
+            font-size: 14px;
+        }
+    </style>
+</body>
+</html>
