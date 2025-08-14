@@ -173,17 +173,7 @@
                                 <td>{{ room.area }}</td>
                                 <td>{{ room.floor }}</td>
                                 <td>{{ room.unit_price }}</td>
-                                <td>
-                                    {% if room.contracts %}
-                                        {% for contract in room.contracts %}
-                                            {% if contract.status == '有效' %}
-                                                {{ contract.customer.company_name }}
-                                            {% endif %}
-                                        {% endfor %}
-                                    {% else %}
-                                        -
-                                    {% endif %}
-                                </td>
+                                <td>{{ room.current_customer if room.current_customer else '-' }}</td>
                                 <td>
                                     <span class="status-badge {% if room.status == '空置' %}status-active{% else %}status-inactive{% endif %}">
                                         {{ room.status }}

@@ -191,27 +191,11 @@ def generate_rent_plans(contract):
                                       period_start.day, period_end.day, 
                                       period_start.year, period_start.month)
         
-        # 计算到期日（本期开始日期加上付款日）
-        try:
-            due_date = period_start.replace(day=contract.payment_day)
-        except ValueError:
-            # 如果付款日超出月份天数，使用月份最后一天
-            last_day = calendar.monthrange(period_start.year, period_start.month)[1]
-            due_date = period_start.replace(day=min(contract.payment_day, last_day))
-        
-        if due_date < period_start:
-            # 如果付款日早于开始日期，则到期日为下个月的付款日
-            if period_start.month == 12:
-                try:
-                    due_date = period_start.replace(year=period_start.year + 1, month=1, day=contract.payment_day)
-                except ValueError:
-                    due_date = period_start.replace(year=period_start.year + 1, month=1, day=31)
-            else:
-                try:
-                    due_date = period_start.replace(month=period_start.month + 1, day=contract.payment_day)
-                except ValueError:
-                    last_day = calendar.monthrange(period_start.year, period_start.month + 1)[1]
-                    due_date = period_start.replace(month=period_start.month + 1, day=last_day)
+        # 计算到期日（上个月的付款日）
+        prev_month = period_start.replace(day=1) - timedelta(days=1)
+        last_day_prev_month = prev_month.day
+        due_day = min(contract.payment_day, last_day_prev_month)
+        due_date = prev_month.replace(day=due_day)
         
         # 创建租金计划
         rent_plan = RentPlan(
@@ -371,7 +355,12 @@ def delete_customer(customer_id):
 @app.route('/rooms')
 def rooms():
     rooms = Room.query.all()
-    
+
+    # 为每个房间标记当前客户
+    for room in rooms:
+        active_contract = next((c for c in room.contracts if c.status == '有效'), None)
+        room.current_customer = active_contract.customer.company_name if active_contract else None
+
     # 计算按面积的出租率
     total_area = sum(room.area for room in rooms)
     occupied_area = sum(room.area for room in rooms if room.status == '已出租')
